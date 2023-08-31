@@ -30,6 +30,7 @@ dependencies {
     testImplementation("org.assertj:assertj-core:3.24.2")
     testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.15.2")
     testImplementation("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.15.2")
+    testImplementation("org.junit.jupiter:junit-jupiter-params:5.10.0")
 }
 
 tasks.test {

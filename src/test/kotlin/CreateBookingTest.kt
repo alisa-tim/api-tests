@@ -5,11 +5,15 @@ import decoders.ApiError
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.catchThrowable
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import java.time.LocalDate
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CreateBookingTest {
 
-    private val booking = Booking(
+    val booking = Booking(
         firstName = "Test",
         lastName = "User",
         totalPrice = 99,
@@ -48,59 +52,20 @@ class CreateBookingTest {
         assertThat(actual).isEqualTo(expected)
     }
 
-    @Test
-    fun `create booking without firstname`() {
-        val expected = booking.copy(firstName = null)
-        val id = api.createBooking(expected).id
-        val error = catchThrowable { api.getBooking(id) }
-        assertThat(error).isEqualTo(ApiError(400, "Bad Request"))
-    }
+    fun bookingsWithoutRequiredInfo(): List<Booking> = listOf(
+        booking.copy(lastName = null),
+        booking.copy(totalPrice = null),
+        booking.copy(depositPaid = null),
+        booking.copy(bookingDates = null),
+        booking.copy(bookingDates = DatesInterval(checkout = LocalDate.now())),
+        booking.copy(bookingDates = DatesInterval(checkin = LocalDate.now()))
 
-    @Test
-    fun `create booking without lastname`() {
-        val expected = booking.copy(lastName = null)
-        val id = api.createBooking(expected).id
-        val error = catchThrowable { api.getBooking(id) }
-        assertThat(error).isEqualTo(ApiError(400, "Bad Request"))
-    }
+    )
 
-    @Test
-    fun `create booking without total price`() {
-        val expected = booking.copy(totalPrice = null)
-        val id = api.createBooking(expected).id
-        val error = catchThrowable { api.getBooking(id) }
-        assertThat(error).isEqualTo(ApiError(400, "Bad Request"))
-    }
-
-    @Test
-    fun `create booking without deposit paid`() {
-        val expected = booking.copy(depositPaid = null)
-        val id = api.createBooking(expected).id
-        val error = catchThrowable { api.getBooking(id) }
-        assertThat(error).isEqualTo(ApiError(400, "Bad Request"))
-    }
-
-    @Test
-    fun `create booking without dates`() {
-        val expected = booking.copy(bookingDates = null)
-        val id = api.createBooking(expected).id
-        val error = catchThrowable { api.getBooking(id) }
-        assertThat(error).isEqualTo(ApiError(400, "Bad Request"))
-    }
-
-    @Test
-    fun `create booking without check in date`() {
-        val expected = booking.copy(bookingDates = DatesInterval(checkout = LocalDate.now()))
-        val id = api.createBooking(expected).id
-        val error = catchThrowable { api.getBooking(id) }
-        assertThat(error).isEqualTo(ApiError(400, "Bad Request"))
-    }
-
-    @Test
-    fun `create booking without check out date`() {
-        val expected = booking.copy(bookingDates = DatesInterval(checkin = LocalDate.now()))
-        val id = api.createBooking(expected).id
-        val error = catchThrowable { api.getBooking(id) }
+    @ParameterizedTest
+    @MethodSource("bookingsWithoutRequiredInfo")
+    fun `create booking without required info`(expected: Booking) {
+        val error = catchThrowable { api.createBooking(expected) }
         assertThat(error).isEqualTo(ApiError(400, "Bad Request"))
     }
 }
