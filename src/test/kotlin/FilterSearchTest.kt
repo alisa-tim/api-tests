@@ -21,30 +21,30 @@ class FilterSearchTest {
 
     @BeforeAll
     fun createBooking() {
-        id = api.createBooking(booking).id
+        id = api.createBooking(booking).execute().body()!!.id
     }
 
     @Test
     fun `search booking by first name`() {
-        val ids = api.getBookings(firstName = booking.firstName).map { id }
+        val ids = api.getBookings(firstName = booking.firstName).execute().body()!!.map { id }
         assertThat(ids).contains(id)
     }
 
     @Test
     fun `search booking by last name`() {
-        val ids = api.getBookings(lastName = booking.lastName).map { id }
+        val ids = api.getBookings(lastName = booking.lastName).execute().body()!!.map { id }
         assertThat(ids).contains(id)
     }
 
     @Test
     fun `search booking by check in date`() {
-        val ids = api.getBookings(checkIn = booking.bookingDates?.checkin).map { it.id }
+        val ids = api.getBookings(checkIn = booking.bookingDates?.checkin).execute().body()!!.map { it.id }
         assertThat(ids).containsOnlyOnce(id)
     }
 
     @Test
     fun `search booking by check out date`() {
-        val ids = api.getBookings(checkOut = booking.bookingDates?.checkout).map { it.id }
+        val ids = api.getBookings(checkOut = booking.bookingDates?.checkout).execute().body()!!.map { it.id }
         assertThat(ids).containsOnlyOnce(id)
     }
 }
