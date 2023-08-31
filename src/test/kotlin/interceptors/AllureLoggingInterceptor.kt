@@ -3,10 +3,8 @@ package interceptors
 import client.mapper
 import io.qameta.allure.Allure
 import io.qameta.allure.model.StepResult
-import okhttp3.Interceptor
-import okhttp3.RequestBody
-import okhttp3.Response
-import okhttp3.ResponseBody
+import okhttp3.*
+import okhttp3.MediaType.Companion.toMediaType
 import java.util.UUID
 
 class AllureLoggingInterceptor : Interceptor {
@@ -59,11 +57,14 @@ class AllureLoggingInterceptor : Interceptor {
         if (responseBody == null) {
             return "No response body"
         }
+        if (responseBody.contentType() == "text/plain; charset=utf-8".toMediaType()) {
+            return responseBody.string()
+        }
         return try {
             val jsonNode = mapper.readTree(responseBody.byteStream())
             mapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode)
         } catch (e: Exception) {
-            "Unable to parse response body as JSON: ${e.message}"
+            "Unable to parse response body as JSON: ${responseBody.string()}"
         }
     }
 }

@@ -5,53 +5,44 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.KotlinFeature
 import com.fasterxml.jackson.module.kotlin.KotlinModule
-import decoders.CustomErrorDecoder
-import feign.Feign
-import feign.Headers
-import feign.Param
-import feign.RequestLine
-import feign.jackson.JacksonDecoder
-import feign.jackson.JacksonEncoder
-import feign.okhttp.OkHttpClient
 import interceptors.AllureLoggingInterceptor
+import retrofit2.Call
+import retrofit2.Retrofit
+import retrofit2.converter.jackson.JacksonConverterFactory
+import retrofit2.http.*
 import java.time.LocalDate
 
 interface ApiClient {
-    @RequestLine("GET /booking?firstname={firstname}&lastname={lastname}&checkin={checkin}&checkout={checkout}")
+    @GET("booking")
     fun getBookings(
-        @Param("firstname") firstName: String? = null,
-        @Param("lastname") lastName: String? = null,
-        @Param("checkin") checkIn: LocalDate? = null,
-        @Param("checkout") checkOut: LocalDate? = null
-    ): List<BookingId>
+        @Query("firstname") firstName: String? = null,
+        @Query("lastname") lastName: String? = null,
+        @Query("checkin") checkIn: LocalDate? = null,
+        @Query("checkout") checkOut: LocalDate? = null
+    ): Call<List<BookingId>>
 
-    @RequestLine("GET /booking/{id}")
-    fun getBooking(@Param("id") id: Int) : Booking
+    @Headers("Accept: application/json")
+    @GET("booking/{id}")
+    fun getBooking(@Path("id") id: Int) : Call<Booking>
 
-    @RequestLine("POST /booking")
     @Headers("Content-Type: application/json", "Accept: application/json")
-    fun createBooking(booking: Booking) : CreatedBooking
+    @POST("booking")
+    fun createBooking(@Body booking: Booking) : Call<CreatedBooking>
 
-    @RequestLine("PUT /booking/{id}")
     @Headers(
         "Content-Type: application/json",
-        "Accept: application/json",
-        "Cookie: token={token}",
-        "Authorization: Basic {token}"
+        "Accept: application/json"
     )
-    fun updateBooking(@Param("token") token: String?, @Param("id") id: Int?, booking: Booking) : Booking
+    @PUT("booking/{id}")
+    fun updateBooking(@Header("Cookie") token: String?, @Path("id") id: Int?, @Body booking: Booking) : Call<Booking>
 
-    @RequestLine("DELETE /booking/{id}")
-    @Headers(
-        "Content-Type: application/json",
-        "Cookie: token={token}",
-        "Authorization: Basic {token}"
-    )
-    fun deleteBooking(@Param("token") token: String?, @Param("id") id: Int)
-
-    @RequestLine("POST /auth")
     @Headers("Content-Type: application/json")
-    fun getToken(user: User): Token
+    @DELETE("booking/{id}")
+    fun deleteBooking(@Header("Cookie") token: String?, @Path("id") id: Int) : Call<Void>
+
+    @Headers("Content-Type: application/json")
+    @POST("auth")
+    fun getToken(@Body user: User): Call<Token>
 }
 
 val mapper: ObjectMapper = ObjectMapper()
@@ -68,14 +59,13 @@ val mapper: ObjectMapper = ObjectMapper()
             .build()
     )
 
-
 val httpClient = okhttp3.OkHttpClient.Builder()
     .addInterceptor(AllureLoggingInterceptor())
     .build()
 
-val api: ApiClient = Feign.builder()
-    .client(OkHttpClient(httpClient))
-    .encoder(JacksonEncoder(mapper))
-    .decoder(JacksonDecoder(mapper))
-    .errorDecoder(CustomErrorDecoder())
-    .target(ApiClient::class.java, "https://restful-booker.herokuapp.com")
+val api = Retrofit.Builder()
+    .baseUrl("https://restful-booker.herokuapp.com/")
+    .client(httpClient)
+    .addConverterFactory(JacksonConverterFactory.create(mapper))
+    .build()
+    .create(ApiClient::class.java)

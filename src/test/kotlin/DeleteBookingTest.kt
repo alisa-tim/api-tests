@@ -2,19 +2,15 @@ import client.Booking
 import client.DatesInterval
 import client.User
 import client.api
-import decoders.ApiError
 import org.assertj.core.api.Assertions.assertThat
-import org.assertj.core.api.Assertions.catchThrowable
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
 import java.time.LocalDate
 
 class DeleteBookingTest {
 
     private var id = 0
-    private val token = api.getToken(User("admin", "password123")).value
+    private val token = api.getToken(User("admin", "password123")).execute().body()!!.value
     private val booking = Booking(
         firstName = "Test",
         lastName = "User",
@@ -25,31 +21,38 @@ class DeleteBookingTest {
 
     @BeforeEach
     fun createBooking() {
-        id = api.createBooking(booking).id
+        id = api.createBooking(booking).execute().body()!!.id
+    }
+
+    @Test
+    fun `delete booking and check that api returns 201 created`() {
+        val response = api.deleteBooking("token = $token", id).execute()
+        assertThat(response.code()).isEqualTo(201)
+        assertThat(response.message()).isEqualTo("Created")
     }
 
     @Test
     fun `delete booking and check that it's not in the booking list`() {
-        api.deleteBooking(token, id)
-        val ids = api.getBookings().map { it.id }
+        api.deleteBooking("token = $token", id).execute()
+        val ids = api.getBookings().execute().body()!!.map { it.id }
         assertThat(ids).doesNotContain(id)
     }
 
     @Test
     fun `delete booking and check that you get 404 when trying to get it booking id`() {
-        api.deleteBooking(token, id)
-        val error = catchThrowable { api.getBooking(id) }
-        assertThat(error).isEqualTo(ApiError(404, "Not Found"))
+        api.deleteBooking("token = $token", id).execute()
+        val response = api.getBooking(id).execute()
+        assertThat(response.code()).isEqualTo(404)
+        assertThat(response.message()).isEqualTo("Not Found")
     }
 
     @Test
     fun `delete without token and check that api returns 403`() {
-        val error = catchThrowable {
-            api.deleteBooking(
+        val response = api.deleteBooking(
                 id = id,
                 token = null
-            )
-        }
-        assertThat(error).isEqualTo(ApiError(403, "Forbidden"))
+            ).execute()
+        assertThat(response.code()).isEqualTo(403)
+        assertThat(response.message()).isEqualTo("Forbidden")
     }
 }
