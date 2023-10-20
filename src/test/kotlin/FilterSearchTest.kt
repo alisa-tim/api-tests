@@ -3,10 +3,12 @@ import client.DatesInterval
 import client.api
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import java.time.LocalDate
 
+@Tag("search")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class FilterSearchTest {
 

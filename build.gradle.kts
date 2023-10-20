@@ -3,6 +3,7 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     kotlin("jvm") version "1.8.21"
     id("io.qameta.allure") version "2.11.2"
+    id("io.qameta.allure-report") version "2.11.2"
     application
 }
 
@@ -32,13 +33,16 @@ dependencies {
 }
 
 tasks.test {
-    useJUnitPlatform()
+    useJUnitPlatform {
+        System.getProperty("TAG")?.let { includeTags(it) }
+    }
     systemProperties(
         mapOf(
             "junit.jupiter.execution.parallel.enabled" to true,
             "junit.jupiter.execution.parallel.mode.default" to "CONCURRENT"
         )
     )
+    finalizedBy(tasks.allureReport)
 }
 
 tasks.withType<KotlinCompile> {

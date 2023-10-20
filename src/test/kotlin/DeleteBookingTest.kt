@@ -4,9 +4,11 @@ import client.User
 import client.api
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
+import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
 
+@Tag("delete")
 class DeleteBookingTest {
 
     private var id = 0
