@@ -1,7 +1,5 @@
-import client.Booking
-import client.DatesInterval
-import client.User
-import client.api
+import client.*
+import io.restassured.RestAssured
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
@@ -13,7 +11,12 @@ import java.time.LocalDate
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class UpdateBookingTest {
 
-    private val token = api.getToken(User("admin", "password123")).execute().body()!!.value
+    private val token: String = RestAssured.given(spec)
+        .body(User("admin", "password123"))
+        .`when`()
+        .post("/auth")
+        .body()
+        .path("token")
     private var id = 0
     private val booking = Booking(
         firstName = "Test",
@@ -26,66 +29,77 @@ class UpdateBookingTest {
 
     @BeforeAll
     fun createBooking() {
-        id = api.createBooking(booking).execute().body()!!.id
+        id = RestAssured.given(spec)
+            .body(booking)
+            .`when`()
+            .post("/booking")
+            .then()
+            .extract()
+            .`as`(CreatedBooking::class.java)
+            .id
     }
 
     @Test
     fun `update booking and check that api returns 200 OK`() {
         val expected = booking.copy(firstName = "New name")
-        val response = api.updateBooking(
-            id = id,
-            token = "token = $token",
-            booking = expected
-        ).execute()
-        assertThat(response.code()).isEqualTo(200)
-        assertThat(response.message()).isEqualTo("OK")
+        RestAssured.given(spec)
+            .header("Cookie", "token = $token")
+            .body(expected)
+            .`when`()
+            .put("/booking/$id")
+            .then()
+            .assertThat()
+            .statusCode(200)
     }
 
     @Test
     fun `update first name and check that api returns updated data`() {
         val expected = booking.copy(firstName = "New name")
-        api.updateBooking(
-            id = id,
-            token = "token = $token",
-            booking = expected
-        )
-        val actual = api.getBooking(id).execute().body()!!
+        RestAssured.given(spec)
+            .header("Cookie", "token = $token")
+            .body(expected)
+            .`when`()
+            .put("/booking/$id")
+        val actual = RestAssured.given(spec)
+            .get("/booking/$id")
+            .then()
+            .extract()
+            .`as`(Booking::class.java)
         assertThat(actual).isEqualTo(expected)
     }
 
     @Test
     fun `update without first name and check that api returns 400`() {
-        val response =
-            api.updateBooking(
-                id = id,
-                token = "token = $token",
-                booking = booking.copy(firstName = null)
-            ).execute()
-        assertThat(response.code()).isEqualTo(400)
-        assertThat(response.message()).isEqualTo("Bad Request")
+        RestAssured.given(spec)
+            .header("Cookie", "token = $token")
+            .body(booking.copy(firstName = null))
+            .`when`()
+            .put("/booking/$id")
+            .then()
+            .assertThat()
+            .statusCode(400)
     }
 
     @Test
     fun `update with empty body and check that api returns 400`() {
-        val response =
-            api.updateBooking(
-                id = id,
-                token = "token = $token",
-                booking = Booking()
-            ).execute()
-        assertThat(response.code()).isEqualTo(400)
-        assertThat(response.message()).isEqualTo("Bad Request")
+        RestAssured.given(spec)
+            .header("Cookie", "token = $token")
+            .body(Booking())
+            .`when`()
+            .put("/booking/$id")
+            .then()
+            .assertThat()
+            .statusCode(400)
     }
 
     @Test
     fun `update without token and check that api returns 403`() {
-        val response =
-            api.updateBooking(
-                id = id,
-                token = null,
-                booking = booking.copy(firstName = null)
-            ).execute()
-        assertThat(response.code()).isEqualTo(403)
-        assertThat(response.message()).isEqualTo("Forbidden")
+        RestAssured.given(spec)
+            .body(booking)
+            .`when`()
+            .put("/booking/$id")
+            .then()
+            .assertThat()
+            .statusCode(403)
     }
 }

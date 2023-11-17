@@ -1,8 +1,8 @@
-import client.Booking
-import client.DatesInterval
-import client.User
-import client.api
-import org.assertj.core.api.Assertions.assertThat
+
+import client.*
+import io.restassured.RestAssured.given
+import org.hamcrest.CoreMatchers
+import org.hamcrest.CoreMatchers.hasItem
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -11,8 +11,6 @@ import java.time.LocalDate
 @Tag("delete")
 class DeleteBookingTest {
 
-    private var id = 0
-    private val token = api.getToken(User("admin", "password123")).execute().body()!!.value
     private val booking = Booking(
         firstName = "Test",
         lastName = "User",
@@ -20,41 +18,66 @@ class DeleteBookingTest {
         depositPaid = true,
         bookingDates = DatesInterval(LocalDate.now(), LocalDate.now().plusDays(5))
     )
+    private val token: String = given(spec)
+        .body(User("admin", "password123"))
+        .`when`()
+        .post("/auth")
+        .body()
+        .path("token")
+    private var id = 0
 
     @BeforeEach
     fun createBooking() {
-        id = api.createBooking(booking).execute().body()!!.id
+        id = given(spec)
+            .body(booking)
+            .`when`()
+            .post("/booking")
+            .then()
+            .extract()
+            .`as`(CreatedBooking::class.java)
+            .id
     }
 
     @Test
     fun `delete booking and check that api returns 201 created`() {
-        val response = api.deleteBooking("token = $token", id).execute()
-        assertThat(response.code()).isEqualTo(201)
-        assertThat(response.message()).isEqualTo("Created")
+        given(spec)
+            .header("Cookie", "token = $token")
+            .delete("/booking/$id")
+            .then()
+            .assertThat()
+            .statusCode(201)
     }
 
     @Test
     fun `delete booking and check that it's not in the booking list`() {
-        api.deleteBooking("token = $token", id).execute()
-        val ids = api.getBookings().execute().body()!!.map { it.id }
-        assertThat(ids).doesNotContain(id)
+        given(spec)
+            .header("Cookie", "token = $token")
+            .delete("/booking/$id")
+        given(spec)
+            .get("/booking")
+            .then()
+            .assertThat()
+            .body("bookingid", CoreMatchers.not(hasItem(id)))
     }
 
     @Test
     fun `delete booking and check that you get 404 when trying to get it booking id`() {
-        api.deleteBooking("token = $token", id).execute()
-        val response = api.getBooking(id).execute()
-        assertThat(response.code()).isEqualTo(404)
-        assertThat(response.message()).isEqualTo("Not Found")
+        given(spec)
+            .header("Cookie", "token = $token")
+            .delete("/booking/$id")
+        given(spec)
+            .get("/booking/$id")
+            .then()
+            .assertThat()
+            .statusCode(404)
     }
 
     @Test
     fun `delete without token and check that api returns 403`() {
-        val response = api.deleteBooking(
-                id = id,
-                token = null
-            ).execute()
-        assertThat(response.code()).isEqualTo(403)
-        assertThat(response.message()).isEqualTo("Forbidden")
+        given(spec)
+            .delete("/booking/$id")
+            .then()
+            .assertThat()
+            .statusCode(403)
     }
 }

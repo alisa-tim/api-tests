@@ -1,11 +1,10 @@
+
 import client.Booking
+import client.CreatedBooking
 import client.DatesInterval
-import client.api
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Tag
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
+import io.restassured.RestAssured.given
+import org.hamcrest.CoreMatchers
+import org.junit.jupiter.api.*
 import java.time.LocalDate
 
 @Tag("search")
@@ -23,30 +22,53 @@ class FilterSearchTest {
 
     @BeforeAll
     fun createBooking() {
-        id = api.createBooking(booking).execute().body()!!.id
+        id = given(spec)
+            .body(booking)
+            .`when`()
+            .post("/booking")
+            .then()
+            .extract()
+            .`as`(CreatedBooking::class.java)
+            .id
     }
 
     @Test
     fun `search booking by first name`() {
-        val ids = api.getBookings(firstName = booking.firstName).execute().body()!!.map { id }
-        assertThat(ids).contains(id)
+        given(spec)
+            .param("firstname", booking.firstName)
+            .get("/booking")
+            .then()
+            .assertThat()
+            .body("bookingid", CoreMatchers.hasItem(id))
     }
 
     @Test
     fun `search booking by last name`() {
-        val ids = api.getBookings(lastName = booking.lastName).execute().body()!!.map { id }
-        assertThat(ids).contains(id)
+        given(spec)
+            .param("lastname", booking.lastName)
+            .get("/booking")
+            .then()
+            .assertThat()
+            .body("bookingid", CoreMatchers.hasItem(id))
     }
 
     @Test
     fun `search booking by check in date`() {
-        val ids = api.getBookings(checkIn = booking.bookingDates?.checkin).execute().body()!!.map { it.id }
-        assertThat(ids).containsOnlyOnce(id)
+        given(spec)
+            .param("checkin", booking.bookingDates?.checkin.toString())
+            .get("/booking")
+            .then()
+            .assertThat()
+            .body("bookingid", CoreMatchers.hasItem(id))
     }
 
     @Test
     fun `search booking by check out date`() {
-        val ids = api.getBookings(checkOut = booking.bookingDates?.checkout).execute().body()!!.map { it.id }
-        assertThat(ids).containsOnlyOnce(id)
+        given(spec)
+            .param("checkout", booking.bookingDates?.checkout.toString())
+            .get("/booking")
+            .then()
+            .assertThat()
+            .body("bookingid", CoreMatchers.hasItem(id))
     }
 }
